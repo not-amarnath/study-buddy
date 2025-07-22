@@ -40,5 +40,5 @@ As a new coder, I wanted to create a real-world project that:
 
 1. Clone the repository  
    ```bash
-   git clone https://github.com/yourusername/ai-study-buddy.git
+   git clone https://github.com/not-amarnath/study-buddy.git
    cd ai-study-buddy
