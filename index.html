@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Buddy 🤖</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🤖</span>
+                <h1>AI Study Buddy</h1>
+            </div>
+            <p class="subtitle">Your personal AI tutor powered by Google Gemini</p>
+        </header>
+
+        <!-- Main App -->
+        <div class="main-app">
+            <!-- Subject Selector -->
+            <div class="subject-selector">
+                <label for="subject">📚 Subject:</label>
+                <select id="subject" class="subject-dropdown">
+                    <option value="general">General</option>
+                    <option value="math">Mathematics</option>
+                    <option value="science">Science</option>
+                    <option value="programming">Programming</option>
+                    <option value="history">History</option>
+                    <option value="english">English</option>
+                    <option value="physics">Physics</option>
+                    <option value="chemistry">Chemistry</option>
+                </select>
+            </div>
+
+            <!-- Question Input -->
+            <div class="question-section">
+                <div class="input-container">
+                    <textarea 
+                        id="questionInput" 
+                        placeholder="What would you like to learn about? Ask me anything..."
+                        rows="4"
+                        class="question-textarea"
+                    ></textarea>
+                    <button id="askButton" class="btn btn-primary ask-btn">
+                        <span class="btn-text">Ask AI Tutor</span>
+                        <span class="btn-loading" style="display: none;">
+                            <span class="spinner"></span>
+                            Thinking...
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Response Section -->
+            <div class="response-section" id="responseSection" style="display: none;">
+                <div class="response-header">
+                    <h3>💡 AI Tutor's Answer:</h3>
+                    <button id="clearBtn" class="btn btn-secondary btn-small">Clear</button>
+                </div>
+                <div class="response-content" id="responseContent"></div>
+            </div>
+
+            <!-- Example Questions -->
+            <div class="examples-section">
+                <h3>💭 Need inspiration? Try these questions:</h3>
+                <div class="example-questions">
+                    <button class="example-btn" data-question="Explain photosynthesis in simple terms">
+                        🌱 Explain photosynthesis in simple terms
+                    </button>
+                    <button class="example-btn" data-question="How do I solve quadratic equations?">
+                        📐 How do I solve quadratic equations?
+                    </button>
+                    <button class="example-btn" data-question="What is the difference between HTML and CSS?">
+                        💻 What is the difference between HTML and CSS?
+                    </button>
+                    <button class="example-btn" data-question="Explain the causes of World War I">
+                        🏛️ Explain the causes of World War I
+                    </button>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="history-section" id="historySection" style="display: none;">
+                <h3>📝 Recent Questions:</h3>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with ❤️ using Google Gemini AI</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
