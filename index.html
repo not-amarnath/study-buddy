@@ -4,97 +4,307 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Study Buddy 🤖</title>
-    <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <span class="logo-icon">🤖</span>
-                <h1>AI Study Buddy</h1>
-            </div>
-            <p class="subtitle">Your personal AI tutor powered by Google Gemini</p>
-        </header>
-
-        <!-- Main App -->
-        <div class="main-app">
-            <!-- Subject Selector -->
-            <div class="subject-selector">
-                <label for="subject">📚 Subject:</label>
-                <select id="subject" class="subject-dropdown">
-                    <option value="general">General</option>
-                    <option value="math">Mathematics</option>
-                    <option value="science">Science</option>
-                    <option value="programming">Programming</option>
-                    <option value="history">History</option>
-                    <option value="english">English</option>
-                    <option value="physics">Physics</option>
-                    <option value="chemistry">Chemistry</option>
-                </select>
-            </div>
-
-            <!-- Question Input -->
-            <div class="question-section">
-                <div class="input-container">
-                    <textarea 
-                        id="questionInput" 
-                        placeholder="What would you like to learn about? Ask me anything..."
-                        rows="4"
-                        class="question-textarea"
-                    ></textarea>
-                    <button id="askButton" class="btn btn-primary ask-btn">
-                        <span class="btn-text">Ask AI Tutor</span>
-                        <span class="btn-loading" style="display: none;">
-                            <span class="spinner"></span>
-                            Thinking...
-                        </span>
-                    </button>
+    <!-- Intro Screen -->
+    <div class="screen intro-screen active" id="introScreen">
+        <div class="intro-content">
+            <div class="intro-animation">
+                <span class="intro-logo-icon">🤖</span>
+                <div class="floating-elements">
+                    <span class="float-element">📚</span>
+                    <span class="float-element">💡</span>
+                    <span class="float-element">🎓</span>
                 </div>
             </div>
-
-            <!-- Response Section -->
-            <div class="response-section" id="responseSection" style="display: none;">
-                <div class="response-header">
-                    <h3>💡 AI Tutor's Answer:</h3>
-                    <button id="clearBtn" class="btn btn-secondary btn-small">Clear</button>
-                </div>
-                <div class="response-content" id="responseContent"></div>
-            </div>
-
-            <!-- Example Questions -->
-            <div class="examples-section">
-                <h3>💭 Need inspiration? Try these questions:</h3>
-                <div class="example-questions">
-                    <button class="example-btn" data-question="Explain photosynthesis in simple terms">
-                        🌱 Explain photosynthesis in simple terms
-                    </button>
-                    <button class="example-btn" data-question="How do I solve quadratic equations?">
-                        📐 How do I solve quadratic equations?
-                    </button>
-                    <button class="example-btn" data-question="What is the difference between HTML and CSS?">
-                        💻 What is the difference between HTML and CSS?
-                    </button>
-                    <button class="example-btn" data-question="Explain the causes of World War I">
-                        🏛️ Explain the causes of World War I
-                    </button>
-                </div>
-            </div>
-
-            <!-- History Section -->
-            <div class="history-section" id="historySection" style="display: none;">
-                <h3>📝 Recent Questions:</h3>
-                <div class="history-list" id="historyList"></div>
-            </div>
+            <h1>AI Study Buddy</h1>
+            <p>Your personal AI tutor powered by Google Gemini. Get instant answers, explanations, and guidance across various subjects.</p>
+            <button id="getStartedBtn" class="btn btn-primary btn-large">
+                <i class="fas fa-rocket"></i>
+                Get Started
+            </button>
         </div>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <p>Built with ❤️ using Google Gemini AI</p>
-        </footer>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Authentication Screen -->
+    <div class="screen auth-screen" id="authScreen">
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <span class="logo-icon">🤖</span>
+                    <h2>AI Study Buddy</h2>
+                </div>
+                <p class="auth-subtitle">Join thousands of students learning smarter</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Login</button>
+                <button class="auth-tab" data-tab="signup">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form class="auth-form active" id="loginForm">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                        <button type="button" class="password-toggle" data-target="loginPassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Signing in...
+                    </span>
+                </button>
+            </form>
+
+            <!-- Signup Form -->
+            <form class="auth-form" id="signupForm">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="signupName" placeholder="Full name" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="signupEmail" placeholder="Enter your email" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="signupPassword" placeholder="Create password" required>
+                        <button type="button" class="password-toggle" data-target="signupPassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="confirmPassword" placeholder="Confirm password" required>
+                        <button type="button" class="password-toggle" data-target="confirmPassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Creating account...
+                    </span>
+                </button>
+            </form>
+
+            <div class="auth-divider">
+                <span>or continue with</span>
+            </div>
+
+            <div class="social-auth">
+                <button id="googleSignInBtn" class="btn btn-google">
+                    <i class="fab fa-google"></i>
+                    Google
+                </button>
+                <button id="phoneAuthBtn" class="btn btn-phone">
+                    <i class="fas fa-phone"></i>
+                    Phone
+                </button>
+            </div>
+
+            <!-- Phone Auth Modal -->
+            <div class="phone-modal" id="phoneModal">
+                <div class="phone-modal-content">
+                    <div class="phone-modal-header">
+                        <h3>Phone Authentication</h3>
+                        <button class="close-modal" id="closePhoneModal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="phone-step" id="phoneStep">
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-phone input-icon"></i>
+                                <input type="tel" id="phoneNumber" placeholder="+1 (555) 123-4567" required>
+                            </div>
+                        </div>
+                        <button id="sendOtpBtn" class="btn btn-primary btn-full">Send OTP</button>
+                    </div>
+                    <div class="phone-step" id="otpStep" style="display: none;">
+                        <p>Enter the verification code sent to your phone</p>
+                        <div class="otp-inputs">
+                            <input type="text" class="otp-input" maxlength="1">
+                            <input type="text" class="otp-input" maxlength="1">
+                            <input type="text" class="otp-input" maxlength="1">
+                            <input type="text" class="otp-input" maxlength="1">
+                            <input type="text" class="otp-input" maxlength="1">
+                            <input type="text" class="otp-input" maxlength="1">
+                        </div>
+                        <button id="verifyOtpBtn" class="btn btn-primary btn-full">Verify Code</button>
+                        <button id="resendOtpBtn" class="btn btn-text">Resend Code</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="recaptcha-container"></div>
+        </div>
+    </div>
+
+    <!-- Main App Screen -->
+    <div class="screen main-screen" id="mainScreen">
+        <div class="app-container">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-left">
+                    <div class="logo">
+                        <span class="logo-icon">🤖</span>
+                        <h1>AI Study Buddy</h1>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="themeToggle" class="btn btn-icon">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    <div class="user-menu">
+                        <button class="user-avatar" id="userMenuBtn">
+                            <i class="fas fa-user"></i>
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            <div class="user-info">
+                                <span class="user-name" id="userName">User</span>
+                                <span class="user-email" id="userEmail">user@example.com</span>
+                            </div>
+                            <hr>
+                            <button class="dropdown-item" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="app-main">
+                <!-- Subject Selector -->
+                <div class="card subject-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-book"></i> Subject</h3>
+                    </div>
+                    <div class="subject-selector">
+                        <select id="subject" class="subject-dropdown">
+                            <option value="general">🎯 General</option>
+                            <option value="math">📐 Mathematics</option>
+                            <option value="science">🔬 Science</option>
+                            <option value="programming">💻 Programming</option>
+                            <option value="history">🏛️ History</option>
+                            <option value="english">📝 English</option>
+                            <option value="physics">⚛️ Physics</option>
+                            <option value="chemistry">🧪 Chemistry</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Question Input -->
+                <div class="card question-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-question-circle"></i> Ask Your Question</h3>
+                    </div>
+                    <div class="question-input">
+                        <textarea 
+                            id="questionInput" 
+                            placeholder="What would you like to learn about? Ask me anything..."
+                            rows="4"
+                        ></textarea>
+                        <div class="question-actions">
+                            <div class="input-hints">
+                                <span class="hint">💡 Tip: Be specific for better answers</span>
+                            </div>
+                            <button id="askButton" class="btn btn-primary">
+                                <span class="btn-text">
+                                    <i class="fas fa-paper-plane"></i>
+                                    Ask AI Tutor
+                                </span>
+                                <span class="btn-loading">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    Thinking...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Response Section -->
+                <div class="card response-card" id="responseCard" style="display: none;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-lightbulb"></i> AI Tutor's Answer</h3>
+                        <button id="clearBtn" class="btn btn-secondary btn-small">
+                            <i class="fas fa-times"></i>
+                            Clear
+                        </button>
+                    </div>
+                    <div class="response-content" id="responseContent"></div>
+                </div>
+
+                <!-- Example Questions -->
+                <div class="card examples-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-lightbulb"></i> Need Inspiration?</h3>
+                    </div>
+                    <div class="example-questions">
+                        <button class="example-btn" data-question="Explain photosynthesis in simple terms">
+                            <i class="fas fa-leaf"></i>
+                            Explain photosynthesis in simple terms
+                        </button>
+                        <button class="example-btn" data-question="How do I solve quadratic equations?">
+                            <i class="fas fa-calculator"></i>
+                            How do I solve quadratic equations?
+                        </button>
+                        <button class="example-btn" data-question="What is the difference between HTML and CSS?">
+                            <i class="fas fa-code"></i>
+                            What is the difference between HTML and CSS?
+                        </button>
+                        <button class="example-btn" data-question="Explain the causes of World War I">
+                            <i class="fas fa-globe"></i>
+                            Explain the causes of World War I
+                        </button>
+                    </div>
+                </div>
+
+                <!-- History Section -->
+                <div class="card history-card" id="historyCard" style="display: none;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Recent Questions</h3>
+                        <button id="clearHistoryBtn" class="btn btn-text btn-small">
+                            Clear All
+                        </button>
+                    </div>
+                    <div class="history-list" id="historyList"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Firebase Scripts - Modern SDK -->
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
