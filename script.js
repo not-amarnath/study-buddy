@@ -45,10 +45,12 @@ class AIStudyBuddy {
       this.handleLogin()
     })
 
-    document.getElementById("signupForm").addEventListener("submit", (e) => {
-      e.preventDefault()
-      this.handleSignup()
-    })
+    document.getElementById('signupForm').addEventListener('submit', function(e) {
+        const btn = this.querySelector('button[type="submit"]');
+        btn.classList.add('loading');
+        // Optionally, remove loading after async signup completes:
+        // setTimeout(() => btn.classList.remove('loading'), 2000);
+    });
 
     // Social auth
     document.getElementById("googleSignInBtn").addEventListener("click", () => {
@@ -176,6 +178,9 @@ class AIStudyBuddy {
     const otpInputs = document.querySelectorAll(".otp-input")
     otpInputs.forEach((input, index) => {
       input.addEventListener("input", (e) => {
+        // Only allow numbers
+        e.target.value = e.target.value.replace(/[^0-9]/g, "")
+
         if (e.target.value.length === 1 && index < otpInputs.length - 1) {
           otpInputs[index + 1].focus()
         }
@@ -185,6 +190,22 @@ class AIStudyBuddy {
         if (e.key === "Backspace" && e.target.value === "" && index > 0) {
           otpInputs[index - 1].focus()
         }
+      })
+
+      input.addEventListener("paste", (e) => {
+        e.preventDefault()
+        const paste = (e.clipboardData || window.clipboardData).getData("text")
+        const digits = paste.replace(/[^0-9]/g, "").slice(0, 6)
+
+        digits.split("").forEach((digit, i) => {
+          if (otpInputs[i]) {
+            otpInputs[i].value = digit
+          }
+        })
+
+        // Focus on the next empty input or the last one
+        const nextIndex = Math.min(digits.length, otpInputs.length - 1)
+        otpInputs[nextIndex].focus()
       })
     })
   }
@@ -260,6 +281,10 @@ class AIStudyBuddy {
     document.getElementById("phoneModal").classList.add("active")
     document.getElementById("phoneStep").style.display = "block"
     document.getElementById("otpStep").style.display = "none"
+
+    // Clear previous inputs
+    document.getElementById("phoneNumber").value = ""
+    document.querySelectorAll(".otp-input").forEach((input) => (input.value = ""))
   }
 
   hidePhoneModal() {
@@ -274,14 +299,33 @@ class AIStudyBuddy {
       return
     }
 
+    // Validate phone number format
+    if (!phoneNumber.startsWith("+")) {
+      showNotification("Please include country code (e.g., +1234567890)", "error")
+      return
+    }
+
+    const sendBtn = document.getElementById("sendOtpBtn")
+    const originalText = sendBtn.textContent
+    sendBtn.textContent = "Sending..."
+    sendBtn.disabled = true
+
     try {
       // Wait for Firebase to be ready
       await this.waitForFirebase()
       await window.firebaseAuth.sendPhoneOTP(phoneNumber)
+
+      // Switch to OTP step
       document.getElementById("phoneStep").style.display = "none"
       document.getElementById("otpStep").style.display = "block"
+
+      // Focus on first OTP input
+      document.querySelector(".otp-input").focus()
     } catch (error) {
       showNotification(error.message, "error")
+    } finally {
+      sendBtn.textContent = originalText
+      sendBtn.disabled = false
     }
   }
 
@@ -292,9 +336,14 @@ class AIStudyBuddy {
       .join("")
 
     if (otp.length !== 6) {
-      showNotification("Please enter the complete verification code", "error")
+      showNotification("Please enter the complete 6-digit verification code", "error")
       return
     }
+
+    const verifyBtn = document.getElementById("verifyOtpBtn")
+    const originalText = verifyBtn.textContent
+    verifyBtn.textContent = "Verifying..."
+    verifyBtn.disabled = true
 
     try {
       // Wait for Firebase to be ready
@@ -303,19 +352,44 @@ class AIStudyBuddy {
       this.hidePhoneModal()
     } catch (error) {
       showNotification(error.message, "error")
+      // Clear OTP inputs on error
+      otpInputs.forEach((input) => (input.value = ""))
+      otpInputs[0].focus()
+    } finally {
+      verifyBtn.textContent = originalText
+      verifyBtn.disabled = false
     }
   }
 
   async handleResendOTP() {
     const phoneNumber = document.getElementById("phoneNumber").value.trim()
 
+    if (!phoneNumber) {
+      showNotification("Phone number not found. Please start over.", "error")
+      return
+    }
+
+    const resendBtn = document.getElementById("resendOtpBtn")
+    const originalText = resendBtn.textContent
+    resendBtn.textContent = "Resending..."
+    resendBtn.disabled = true
+
     try {
       // Wait for Firebase to be ready
       await this.waitForFirebase()
-      await window.firebaseAuth.sendPhoneOTP(phoneNumber)
-      showNotification("OTP resent successfully!", "success")
+      await window.firebaseAuth.resendPhoneOTP(phoneNumber)
+
+      // Clear OTP inputs
+      document.querySelectorAll(".otp-input").forEach((input) => (input.value = ""))
+      document.querySelector(".otp-input").focus()
     } catch (error) {
       showNotification(error.message, "error")
+    } finally {
+      // Re-enable button after 30 seconds
+      setTimeout(() => {
+        resendBtn.textContent = originalText
+        resendBtn.disabled = false
+      }, 30000)
     }
   }
 

@@ -881,19 +881,45 @@ body {
 }
 
 .btn-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px; /* Adds space between icon and text */
-  color: #fff;
-  font-weight: 600;
-  font-size: 1.2rem;
-  letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff; /* Ensure text is visible */
+    opacity: 1;
 }
 
-.btn-text i {
-  font-size: 1.3em;
-  margin-right: 4px; /* Extra space if needed */
+.btn-loading {
+    display: none;
+    vertical-align: middle;
+}
+
+/* Show loading when parent has .loading class */
+.btn.loading .btn-text {
+    display: none;
+}
+.btn.loading .btn-loading {
+    display: inline-block;
+}
+
+/* Clear All Button */
+.btn-clear-all {
+    background: #fff;
+    color: #222;
+    font-weight: 700;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.btn-clear-all:hover,
+.btn-clear-all:focus {
+    background: #f1f5f9;
+    color: #111;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    outline: none;
 }
 
 /* Notifications */
