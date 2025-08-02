@@ -45,12 +45,10 @@ class AIStudyBuddy {
       this.handleLogin()
     })
 
-    document.getElementById('signupForm').addEventListener('submit', function(e) {
-      const btn = this.querySelector('button[type="submit"]');
-      btn.classList.add('loading');
-      // Optionally, remove loading after async signup completes:
-      // setTimeout(() => btn.classList.remove('loading'), 2000);
-    });
+    document.getElementById("signupForm").addEventListener("submit", (e) => {
+      e.preventDefault()
+      this.handleSignup()
+    })
 
     // Social auth
     document.getElementById("googleSignInBtn").addEventListener("click", () => {
@@ -431,8 +429,9 @@ class AIStudyBuddy {
     const systemPrompt = subjectPrompts[subject] || subjectPrompts.general
     const fullPrompt = `${systemPrompt}\n\nStudent's Question: ${question}\n\nPlease provide a clear, educational answer that:\n1. Explains the concept in simple, easy-to-understand terms\n2. Uses examples or analogies when helpful\n3. Breaks down complex ideas into smaller, manageable parts\n4. Encourages further learning and curiosity\n\nAnswer:`
 
+    // Updated API endpoint and model name
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -444,20 +443,39 @@ class AIStudyBuddy {
             topP: 0.95,
             maxOutputTokens: 2048,
           },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE",
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE",
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE",
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE",
+            },
+          ],
         }),
       },
     )
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`API Error (${response.status}): ${errorText}`)
+      const errorData = await response.json().catch(() => null)
+      const errorMessage = errorData?.error?.message || `HTTP ${response.status}: ${response.statusText}`
+      throw new Error(`API Error: ${errorMessage}`)
     }
 
     const data = await response.json()
     const result = data?.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!result) {
-      throw new Error("No response generated from AI")
+      throw new Error("No response generated from AI. Please try again.")
     }
 
     return result
