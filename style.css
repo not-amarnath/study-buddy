@@ -884,25 +884,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff; /* Ensure text is visible */
-  opacity: 1;
+  gap: 10px; /* Adds space between icon and text */
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.2rem;
+  letter-spacing: 0.5px;
 }
 
-.btn-loading {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  color: #fff; /* Ensure spinner text is visible */
-  opacity: 1;
+.btn-text i {
+  font-size: 1.3em;
+  margin-right: 4px; /* Extra space if needed */
 }
 
-/* Show loading when parent has .loading class */
-.btn.loading .btn-text {
-  display: none;
-}
-.btn.loading .btn-loading {
-  display: flex;
-}
 /* Notifications */
 .notification-container {
   position: fixed;
