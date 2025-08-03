@@ -189,57 +189,84 @@ class FirebaseAuth {
     }
   }
 
-  // Phone Authentication - Setup reCAPTCHA
+  // Phone Authentication - Setup reCAPTCHA with better error handling
   setupRecaptcha(containerId = "recaptcha-container", options = {}) {
-    try {
-      // Clear existing verifier
-      if (this.recaptchaVerifier) {
-        this.recaptchaVerifier.clear()
-        this.recaptchaVerifier = null
-      }
-
-      // Default options
-      const defaultOptions = {
-        size: "invisible",
-        callback: (response) => {
-          console.log("reCAPTCHA solved, response:", response)
-          // reCAPTCHA solved, allow signInWithPhoneNumber
-        },
-        "expired-callback": () => {
-          console.log("reCAPTCHA expired")
-          if (window.showNotification) {
-            window.showNotification("reCAPTCHA expired. Please try again.", "warning")
+    return new Promise((resolve, reject) => {
+      try {
+        // Clear existing verifier
+        if (this.recaptchaVerifier) {
+          try {
+            this.recaptchaVerifier.clear()
+          } catch (e) {
+            console.log("Error clearing previous reCAPTCHA:", e)
           }
-          // Reset the reCAPTCHA
-          this.resetRecaptcha()
-        },
+          this.recaptchaVerifier = null
+        }
+
+        // Check if container exists
+        const container = document.getElementById(containerId)
+        if (!container) {
+          reject(new Error(`reCAPTCHA container '${containerId}' not found`))
+          return
+        }
+
+        // Clear container
+        container.innerHTML = ""
+
+        // Default options
+        const defaultOptions = {
+          size: "invisible",
+          callback: (response) => {
+            console.log("reCAPTCHA solved successfully")
+            resolve(response)
+          },
+          "expired-callback": () => {
+            console.log("reCAPTCHA expired")
+            if (window.showNotification) {
+              window.showNotification("reCAPTCHA expired. Please try again.", "warning")
+            }
+            this.resetRecaptcha()
+          },
+          "error-callback": (error) => {
+            console.error("reCAPTCHA error:", error)
+            if (window.showNotification) {
+              window.showNotification("reCAPTCHA error. Please refresh and try again.", "error")
+            }
+            reject(new Error("reCAPTCHA verification failed"))
+          },
+        }
+
+        // Merge options
+        const recaptchaOptions = { ...defaultOptions, ...options }
+
+        console.log("Setting up reCAPTCHA with options:", recaptchaOptions)
+
+        // Create new RecaptchaVerifier
+        this.recaptchaVerifier = new RecaptchaVerifier(this.auth, containerId, recaptchaOptions)
+
+        // For invisible reCAPTCHA, we don't need to render explicitly
+        if (recaptchaOptions.size === "invisible") {
+          console.log("Invisible reCAPTCHA setup complete")
+          resolve(this.recaptchaVerifier)
+        } else {
+          // For visible reCAPTCHA, render it
+          this.recaptchaVerifier
+            .render()
+            .then((widgetId) => {
+              this.recaptchaWidgetId = widgetId
+              console.log("Visible reCAPTCHA rendered with widget ID:", widgetId)
+              resolve(this.recaptchaVerifier)
+            })
+            .catch((error) => {
+              console.error("reCAPTCHA render error:", error)
+              reject(error)
+            })
+        }
+      } catch (error) {
+        console.error("reCAPTCHA setup error:", error)
+        reject(new Error("Failed to setup reCAPTCHA. Please refresh the page and try again."))
       }
-
-      // Merge options
-      const recaptchaOptions = { ...defaultOptions, ...options }
-
-      // Create new RecaptchaVerifier
-      this.recaptchaVerifier = new RecaptchaVerifier(this.auth, containerId, recaptchaOptions)
-
-      // Render the reCAPTCHA (for visible reCAPTCHA)
-      if (recaptchaOptions.size === "normal") {
-        this.recaptchaVerifier
-          .render()
-          .then((widgetId) => {
-            this.recaptchaWidgetId = widgetId
-            console.log("reCAPTCHA rendered with widget ID:", widgetId)
-          })
-          .catch((error) => {
-            console.error("reCAPTCHA render error:", error)
-          })
-      }
-
-      console.log("reCAPTCHA verifier setup complete")
-      return this.recaptchaVerifier
-    } catch (error) {
-      console.error("reCAPTCHA setup error:", error)
-      throw new Error("Failed to setup reCAPTCHA. Please refresh the page and try again.")
-    }
+    })
   }
 
   // Reset reCAPTCHA
@@ -247,10 +274,12 @@ class FirebaseAuth {
     try {
       if (this.recaptchaWidgetId && window.grecaptcha) {
         window.grecaptcha.reset(this.recaptchaWidgetId)
+        console.log("reCAPTCHA reset successfully")
       } else if (this.recaptchaVerifier) {
         this.recaptchaVerifier.render().then((widgetId) => {
           if (window.grecaptcha) {
             window.grecaptcha.reset(widgetId)
+            console.log("reCAPTCHA reset after render")
           }
         })
       }
@@ -259,23 +288,52 @@ class FirebaseAuth {
     }
   }
 
-  // Send Phone OTP
+  // Format phone number
+  formatPhoneNumber(phoneNumber) {
+    // Remove all non-digit characters
+    let cleaned = phoneNumber.replace(/\D/g, "")
+
+    // If it doesn't start with +, add country code
+    if (!phoneNumber.startsWith("+")) {
+      // Default to US country code if no + is provided
+      if (cleaned.length === 10) {
+        cleaned = "1" + cleaned // Add US country code
+      }
+      cleaned = "+" + cleaned
+    } else {
+      cleaned = phoneNumber
+    }
+
+    console.log("Formatted phone number:", cleaned)
+    return cleaned
+  }
+
+  // Send Phone OTP with comprehensive error handling
   async sendPhoneOTP(phoneNumber) {
     try {
-      // Validate phone number format
-      if (!phoneNumber.startsWith("+")) {
-        throw new Error("Phone number must include country code (e.g., +1234567890)")
+      console.log("Starting phone OTP process...")
+
+      // Format and validate phone number
+      const formattedPhone = this.formatPhoneNumber(phoneNumber)
+
+      if (formattedPhone.length < 10) {
+        throw new Error("Please enter a valid phone number")
       }
 
-      // Setup reCAPTCHA if not already done
+      console.log("Sending OTP to:", formattedPhone)
+
+      // Setup reCAPTCHA
+      console.log("Setting up reCAPTCHA...")
+      await this.setupRecaptcha("recaptcha-container", { size: "invisible" })
+
       if (!this.recaptchaVerifier) {
-        this.setupRecaptcha("recaptcha-container", { size: "invisible" })
+        throw new Error("reCAPTCHA setup failed")
       }
 
-      console.log("Sending OTP to:", phoneNumber)
+      console.log("reCAPTCHA setup successful, sending SMS...")
 
       // Send SMS
-      this.confirmationResult = await signInWithPhoneNumber(this.auth, phoneNumber, this.recaptchaVerifier)
+      this.confirmationResult = await signInWithPhoneNumber(this.auth, formattedPhone, this.recaptchaVerifier)
 
       console.log("SMS sent successfully")
 
@@ -292,8 +350,21 @@ class FirebaseAuth {
 
       // Clear the verifier to force recreation
       if (this.recaptchaVerifier) {
-        this.recaptchaVerifier.clear()
+        try {
+          this.recaptchaVerifier.clear()
+        } catch (e) {
+          console.log("Error clearing reCAPTCHA:", e)
+        }
         this.recaptchaVerifier = null
+      }
+
+      // Handle specific errors
+      if (error.code === "auth/invalid-phone-number") {
+        throw new Error("Invalid phone number format. Please include country code (e.g., +1234567890)")
+      } else if (error.code === "auth/too-many-requests") {
+        throw new Error("Too many requests. Please try again later.")
+      } else if (error.code === "auth/quota-exceeded") {
+        throw new Error("SMS quota exceeded. Please try again later.")
       }
 
       throw this.handleAuthError(error)
@@ -311,7 +382,7 @@ class FirebaseAuth {
         throw new Error("Please enter a valid 6-digit verification code.")
       }
 
-      console.log("Verifying OTP code:", code)
+      console.log("Verifying OTP code...")
 
       // Confirm the SMS code
       const result = await this.confirmationResult.confirm(code)
@@ -343,18 +414,24 @@ class FirebaseAuth {
   // Resend OTP
   async resendPhoneOTP(phoneNumber) {
     try {
+      console.log("Resending OTP...")
+
       // Clear previous confirmation result
       this.confirmationResult = null
 
       // Reset and clear reCAPTCHA
       this.resetRecaptcha()
       if (this.recaptchaVerifier) {
-        this.recaptchaVerifier.clear()
+        try {
+          this.recaptchaVerifier.clear()
+        } catch (e) {
+          console.log("Error clearing reCAPTCHA:", e)
+        }
         this.recaptchaVerifier = null
       }
 
       // Wait a moment before resending
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       // Send new OTP
       return await this.sendPhoneOTP(phoneNumber)
@@ -364,12 +441,39 @@ class FirebaseAuth {
     }
   }
 
+  // Test phone authentication setup
+  async testPhoneAuthSetup() {
+    try {
+      console.log("Testing phone authentication setup...")
+
+      // Check if reCAPTCHA container exists
+      const container = document.getElementById("recaptcha-container")
+      if (!container) {
+        console.error("reCAPTCHA container not found")
+        return false
+      }
+
+      // Try to setup reCAPTCHA
+      await this.setupRecaptcha("recaptcha-container", { size: "invisible" })
+
+      console.log("Phone authentication setup test passed")
+      return true
+    } catch (error) {
+      console.error("Phone authentication setup test failed:", error)
+      return false
+    }
+  }
+
   // Sign Out
   async signOut() {
     try {
       // Clear reCAPTCHA verifier
       if (this.recaptchaVerifier) {
-        this.recaptchaVerifier.clear()
+        try {
+          this.recaptchaVerifier.clear()
+        } catch (e) {
+          console.log("Error clearing reCAPTCHA:", e)
+        }
         this.recaptchaVerifier = null
       }
 
@@ -407,6 +511,7 @@ class FirebaseAuth {
       "auth/missing-phone-number": "Phone number is required.",
       "auth/missing-verification-code": "Verification code is required.",
       "auth/session-expired": "Session expired. Please try again.",
+      "auth/unauthorized-domain": "This domain is not authorized. Please add it to Firebase Console.",
     }
 
     const message = errorMessages[error.code] || error.message || "An error occurred during authentication."
@@ -437,6 +542,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize Firebase Auth
   window.firebaseAuth = new FirebaseAuth()
   console.log("Firebase Auth initialized successfully")
+
+  // Test phone auth setup after a short delay
+  setTimeout(() => {
+    if (window.firebaseAuth) {
+      window.firebaseAuth.testPhoneAuthSetup()
+    }
+  }, 2000)
 })
 
 // Export for use in other modules
