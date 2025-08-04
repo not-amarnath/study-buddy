@@ -1,27 +1,8 @@
-// Import Firebase modules (v9+ modular SDK)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signInWithPhoneNumber,
-  GoogleAuthProvider,
-  RecaptchaVerifier,
-  onAuthStateChanged,
-  signOut,
-  updateProfile,
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+// Hybrid Firebase setup - using both compat and modular SDK for better reliability
+import firebase from "firebase/compat/app"
+import "firebase/compat/auth"
+import "firebase/compat/firestore"
 
-// Add this helper function before the FirebaseAuth class
-function getCurrentDomain() {
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return "localhost"
-  }
-  return window.location.hostname
-}
-
-// Firebase Configuration and Authentication
 class FirebaseAuth {
   constructor() {
     this.app = null
@@ -35,6 +16,7 @@ class FirebaseAuth {
   }
 
   initializeFirebase() {
+    // Your original Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDzqoKK6ixo00Rrff937ODqbfiKvTYA1M0",
       authDomain: "studdy-buddy-cfe22.firebaseapp.com",
@@ -46,29 +28,26 @@ class FirebaseAuth {
     }
 
     try {
-      // Initialize Firebase
-      this.app = initializeApp(firebaseConfig)
-      this.auth = getAuth(this.app)
+      // Check if Firebase is already initialized
+      if (!firebase.apps.length) {
+        // Initialize Firebase using compat SDK
+        firebase.initializeApp(firebaseConfig)
+      }
 
-      // Set language code (optional)
+      this.auth = firebase.auth()
       this.auth.languageCode = "en"
-      // Or use device language: this.auth.useDeviceLanguage()
-
-      // Log current domain for debugging
-      console.log("Current domain:", getCurrentDomain())
-      console.log("Auth domain:", firebaseConfig.authDomain)
 
       // Setup auth state listener
       this.setupAuthStateListener()
 
-      console.log("Firebase initialized successfully")
+      console.log("Firebase initialized successfully with compat SDK")
     } catch (error) {
       console.error("Firebase initialization error:", error)
     }
   }
 
   setupAuthStateListener() {
-    onAuthStateChanged(this.auth, (user) => {
+    this.auth.onAuthStateChanged((user) => {
       this.currentUser = user
       if (user) {
         console.log("User signed in:", user.email || user.phoneNumber)
@@ -124,11 +103,11 @@ class FirebaseAuth {
   // Email/Password Authentication
   async signUpWithEmail(email, password, name) {
     try {
-      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password)
+      const userCredential = await this.auth.createUserWithEmailAndPassword(email, password)
 
       // Update profile with name
       if (name && userCredential.user) {
-        await updateProfile(userCredential.user, {
+        await userCredential.user.updateProfile({
           displayName: name,
         })
       }
@@ -145,7 +124,7 @@ class FirebaseAuth {
 
   async signInWithEmail(email, password) {
     try {
-      const userCredential = await signInWithEmailAndPassword(this.auth, email, password)
+      const userCredential = await this.auth.signInWithEmailAndPassword(email, password)
       return userCredential.user
     } catch (error) {
       console.error("Sign in error:", error)
@@ -156,29 +135,18 @@ class FirebaseAuth {
   // Google Authentication
   async signInWithGoogle() {
     try {
-      const provider = new GoogleAuthProvider()
-
-      // Add scopes for additional permissions (optional)
+      const provider = new firebase.auth.GoogleAuthProvider()
       provider.addScope("profile")
       provider.addScope("email")
 
-      const result = await signInWithPopup(this.auth, provider)
-
-      // This gives you a Google Access Token. You can use it to access the Google API.
-      const credential = GoogleAuthProvider.credentialFromResult(result)
-      const token = credential?.accessToken
-
-      // The signed-in user info
+      const result = await this.auth.signInWithPopup(provider)
       const user = result.user
 
       console.log("Google sign-in successful:", user)
-      console.log("Access token:", token)
-
       return user
     } catch (error) {
       console.error("Google sign in error:", error)
 
-      // Handle specific Google Auth errors
       if (error.code === "auth/popup-closed-by-user") {
         throw new Error("Sign-in popup was closed. Please try again.")
       } else if (error.code === "auth/cancelled-popup-request") {
@@ -189,131 +157,80 @@ class FirebaseAuth {
     }
   }
 
-  // Phone Authentication - Setup reCAPTCHA with better error handling
-  setupRecaptcha(containerId = "recaptcha-container", options = {}) {
-    return new Promise((resolve, reject) => {
-      try {
-        // Clear existing verifier
-        if (this.recaptchaVerifier) {
-          try {
-            this.recaptchaVerifier.clear()
-          } catch (e) {
-            console.log("Error clearing previous reCAPTCHA:", e)
-          }
-          this.recaptchaVerifier = null
-        }
-
-        // Check if container exists
-        const container = document.getElementById(containerId)
-        if (!container) {
-          reject(new Error(`reCAPTCHA container '${containerId}' not found`))
-          return
-        }
-
-        // Clear container
-        container.innerHTML = ""
-
-        // Default options
-        const defaultOptions = {
-          size: "invisible",
-          callback: (response) => {
-            console.log("reCAPTCHA solved successfully")
-            resolve(response)
-          },
-          "expired-callback": () => {
-            console.log("reCAPTCHA expired")
-            if (window.showNotification) {
-              window.showNotification("reCAPTCHA expired. Please try again.", "warning")
-            }
-            this.resetRecaptcha()
-          },
-          "error-callback": (error) => {
-            console.error("reCAPTCHA error:", error)
-            if (window.showNotification) {
-              window.showNotification("reCAPTCHA error. Please refresh and try again.", "error")
-            }
-            reject(new Error("reCAPTCHA verification failed"))
-          },
-        }
-
-        // Merge options
-        const recaptchaOptions = { ...defaultOptions, ...options }
-
-        console.log("Setting up reCAPTCHA with options:", recaptchaOptions)
-
-        // Create new RecaptchaVerifier
-        this.recaptchaVerifier = new RecaptchaVerifier(this.auth, containerId, recaptchaOptions)
-
-        // For invisible reCAPTCHA, we don't need to render explicitly
-        if (recaptchaOptions.size === "invisible") {
-          console.log("Invisible reCAPTCHA setup complete")
-          resolve(this.recaptchaVerifier)
-        } else {
-          // For visible reCAPTCHA, render it
-          this.recaptchaVerifier
-            .render()
-            .then((widgetId) => {
-              this.recaptchaWidgetId = widgetId
-              console.log("Visible reCAPTCHA rendered with widget ID:", widgetId)
-              resolve(this.recaptchaVerifier)
-            })
-            .catch((error) => {
-              console.error("reCAPTCHA render error:", error)
-              reject(error)
-            })
-        }
-      } catch (error) {
-        console.error("reCAPTCHA setup error:", error)
-        reject(new Error("Failed to setup reCAPTCHA. Please refresh the page and try again."))
-      }
-    })
-  }
-
-  // Reset reCAPTCHA
-  resetRecaptcha() {
+  // Phone Authentication - Setup reCAPTCHA (based on your working code)
+  setupRecaptcha() {
     try {
-      if (this.recaptchaWidgetId && window.grecaptcha) {
-        window.grecaptcha.reset(this.recaptchaWidgetId)
-        console.log("reCAPTCHA reset successfully")
-      } else if (this.recaptchaVerifier) {
-        this.recaptchaVerifier.render().then((widgetId) => {
-          if (window.grecaptcha) {
-            window.grecaptcha.reset(widgetId)
-            console.log("reCAPTCHA reset after render")
-          }
-        })
+      // Clear existing verifier
+      if (this.recaptchaVerifier) {
+        this.recaptchaVerifier.clear()
+        this.recaptchaVerifier = null
       }
+
+      // Clear the container
+      const container = document.getElementById("recaptcha-container")
+      if (container) {
+        container.innerHTML = ""
+      }
+
+      console.log("Setting up reCAPTCHA...")
+
+      // Create new RecaptchaVerifier using compat SDK
+      this.recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", {
+        size: "invisible",
+        callback: (response) => {
+          console.log("reCAPTCHA solved successfully")
+        },
+        "expired-callback": () => {
+          console.log("reCAPTCHA expired")
+          if (window.showNotification) {
+            window.showNotification("reCAPTCHA expired. Please try again.", "warning")
+          }
+        },
+        "error-callback": (error) => {
+          console.error("reCAPTCHA error:", error)
+          if (window.showNotification) {
+            window.showNotification("reCAPTCHA error. Please try again.", "error")
+          }
+        },
+      })
+
+      // Render the reCAPTCHA
+      return this.recaptchaVerifier.render().then((widgetId) => {
+        this.recaptchaWidgetId = widgetId
+        console.log("reCAPTCHA rendered successfully with widget ID:", widgetId)
+        return this.recaptchaVerifier
+      })
     } catch (error) {
-      console.error("reCAPTCHA reset error:", error)
+      console.error("reCAPTCHA setup error:", error)
+      throw new Error("Failed to setup reCAPTCHA. Please refresh and try again.")
     }
   }
 
   // Format phone number
   formatPhoneNumber(phoneNumber) {
-    // Remove all non-digit characters
-    let cleaned = phoneNumber.replace(/\D/g, "")
+    // Remove all non-digit characters except +
+    let cleaned = phoneNumber.replace(/[^\d+]/g, "")
 
     // If it doesn't start with +, add country code
-    if (!phoneNumber.startsWith("+")) {
+    if (!cleaned.startsWith("+")) {
       // Default to US country code if no + is provided
       if (cleaned.length === 10) {
-        cleaned = "1" + cleaned // Add US country code
+        cleaned = "+1" + cleaned
+      } else {
+        cleaned = "+" + cleaned
       }
-      cleaned = "+" + cleaned
-    } else {
-      cleaned = phoneNumber
     }
 
     console.log("Formatted phone number:", cleaned)
     return cleaned
   }
 
-  // Send Phone OTP with comprehensive error handling
+  // Send Phone OTP (based on your working phoneAuth function)
   async sendPhoneOTP(phoneNumber) {
     try {
       console.log("Starting phone OTP process...")
 
-      // Format and validate phone number
+      // Format phone number
       const formattedPhone = this.formatPhoneNumber(phoneNumber)
 
       if (formattedPhone.length < 10) {
@@ -323,8 +240,7 @@ class FirebaseAuth {
       console.log("Sending OTP to:", formattedPhone)
 
       // Setup reCAPTCHA
-      console.log("Setting up reCAPTCHA...")
-      await this.setupRecaptcha("recaptcha-container", { size: "invisible" })
+      await this.setupRecaptcha()
 
       if (!this.recaptchaVerifier) {
         throw new Error("reCAPTCHA setup failed")
@@ -332,10 +248,10 @@ class FirebaseAuth {
 
       console.log("reCAPTCHA setup successful, sending SMS...")
 
-      // Send SMS
-      this.confirmationResult = await signInWithPhoneNumber(this.auth, formattedPhone, this.recaptchaVerifier)
+      // Send SMS using compat SDK (similar to your working code)
+      this.confirmationResult = await this.auth.signInWithPhoneNumber(formattedPhone, this.recaptchaVerifier)
 
-      console.log("SMS sent successfully")
+      console.log("OTP Sent successfully")
 
       if (window.showNotification) {
         window.showNotification("OTP sent successfully! 📱", "success")
@@ -345,10 +261,7 @@ class FirebaseAuth {
     } catch (error) {
       console.error("Send OTP error:", error)
 
-      // Reset reCAPTCHA on error
-      this.resetRecaptcha()
-
-      // Clear the verifier to force recreation
+      // Clear reCAPTCHA on error
       if (this.recaptchaVerifier) {
         try {
           this.recaptchaVerifier.clear()
@@ -363,15 +276,13 @@ class FirebaseAuth {
         throw new Error("Invalid phone number format. Please include country code (e.g., +1234567890)")
       } else if (error.code === "auth/too-many-requests") {
         throw new Error("Too many requests. Please try again later.")
-      } else if (error.code === "auth/quota-exceeded") {
-        throw new Error("SMS quota exceeded. Please try again later.")
       }
 
       throw this.handleAuthError(error)
     }
   }
 
-  // Verify Phone OTP
+  // Verify Phone OTP (based on your working codeverify function)
   async verifyPhoneOTP(code) {
     try {
       if (!this.confirmationResult) {
@@ -384,10 +295,10 @@ class FirebaseAuth {
 
       console.log("Verifying OTP code...")
 
-      // Confirm the SMS code
+      // Confirm the SMS code (similar to your working code)
       const result = await this.confirmationResult.confirm(code)
 
-      console.log("Phone verification successful:", result.user)
+      console.log("OTP Verified successfully")
 
       if (window.showNotification) {
         window.showNotification("Phone verified successfully! ✅", "success")
@@ -400,8 +311,8 @@ class FirebaseAuth {
     } catch (error) {
       console.error("Verify OTP error:", error)
 
-      // Handle specific verification errors
       if (error.code === "auth/invalid-verification-code") {
+        console.log("OTP Not correct")
         throw new Error("Invalid verification code. Please check and try again.")
       } else if (error.code === "auth/code-expired") {
         throw new Error("Verification code has expired. Please request a new one.")
@@ -419,8 +330,7 @@ class FirebaseAuth {
       // Clear previous confirmation result
       this.confirmationResult = null
 
-      // Reset and clear reCAPTCHA
-      this.resetRecaptcha()
+      // Clear reCAPTCHA
       if (this.recaptchaVerifier) {
         try {
           this.recaptchaVerifier.clear()
@@ -441,29 +351,6 @@ class FirebaseAuth {
     }
   }
 
-  // Test phone authentication setup
-  async testPhoneAuthSetup() {
-    try {
-      console.log("Testing phone authentication setup...")
-
-      // Check if reCAPTCHA container exists
-      const container = document.getElementById("recaptcha-container")
-      if (!container) {
-        console.error("reCAPTCHA container not found")
-        return false
-      }
-
-      // Try to setup reCAPTCHA
-      await this.setupRecaptcha("recaptcha-container", { size: "invisible" })
-
-      console.log("Phone authentication setup test passed")
-      return true
-    } catch (error) {
-      console.error("Phone authentication setup test failed:", error)
-      return false
-    }
-  }
-
   // Sign Out
   async signOut() {
     try {
@@ -480,7 +367,7 @@ class FirebaseAuth {
       // Clear confirmation result
       this.confirmationResult = null
 
-      await signOut(this.auth)
+      await this.auth.signOut()
 
       if (window.showNotification) {
         window.showNotification("Signed out successfully! 👋", "info")
@@ -508,9 +395,6 @@ class FirebaseAuth {
       "auth/code-expired": "Verification code has expired. Please request a new one.",
       "auth/quota-exceeded": "SMS quota exceeded. Please try again later.",
       "auth/captcha-check-failed": "reCAPTCHA verification failed. Please try again.",
-      "auth/missing-phone-number": "Phone number is required.",
-      "auth/missing-verification-code": "Verification code is required.",
-      "auth/session-expired": "Session expired. Please try again.",
       "auth/unauthorized-domain": "This domain is not authorized. Please add it to Firebase Console.",
     }
 
@@ -527,28 +411,17 @@ class FirebaseAuth {
   isAuthenticated() {
     return !!this.currentUser
   }
-
-  // Get reCAPTCHA response (for debugging)
-  getRecaptchaResponse() {
-    if (this.recaptchaWidgetId && window.grecaptcha) {
-      return window.grecaptcha.getResponse(this.recaptchaWidgetId)
-    }
-    return null
-  }
 }
 
 // Initialize Firebase Auth when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize Firebase Auth
-  window.firebaseAuth = new FirebaseAuth()
-  console.log("Firebase Auth initialized successfully")
-
-  // Test phone auth setup after a short delay
-  setTimeout(() => {
-    if (window.firebaseAuth) {
-      window.firebaseAuth.testPhoneAuthSetup()
-    }
-  }, 2000)
+  // Wait for Firebase compat SDK to load
+  if (typeof firebase !== "undefined") {
+    window.firebaseAuth = new FirebaseAuth()
+    console.log("Firebase Auth initialized successfully with compat SDK")
+  } else {
+    console.error("Firebase compat SDK not loaded")
+  }
 })
 
 // Export for use in other modules

@@ -710,6 +710,17 @@ function showNotification(message, type = "info") {
 // Make showNotification globally available
 window.showNotification = showNotification
 
+function fadeInOutH1() {
+    const h1 = document.querySelector('h1');
+    h1.classList.remove('fade-out');
+    h1.classList.add('fade-in');
+    setTimeout(() => {
+        h1.classList.remove('fade-in');
+        h1.classList.add('fade-out');
+    }, 2000); // fades out after 2 seconds
+}
+// Call fadeInOutH1() when you want the effect
+
 // Initialize the app
 document.addEventListener("DOMContentLoaded", () => {
   new AIStudyBuddy()

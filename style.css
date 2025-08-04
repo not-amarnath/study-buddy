@@ -991,6 +991,23 @@ body {
   }
 }
 
+/* Fade In/Out Animations */
+.fade-in {
+    animation: fadeIn 1s forwards;
+}
+.fade-out {
+    animation: fadeOut 1s forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .intro-content {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Study Buddy 🤖</title>
+    <title>Study Buddy 🤖</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -20,8 +20,8 @@
                     <span class="float-element">🎓</span>
                 </div>
             </div>
-            <h1>AI Study Buddy</h1>
-            <p>Your personal AI tutor powered by Google Gemini. Get instant answers, explanations, and guidance across various subjects.</p>
+            <h1> Study Buddy: Learn Smarter, Not Harder </h1>
+            <p>More than a study tool — it's your personal mentor for mastering any subject, anytime.</p>
             <button id="getStartedBtn" class="btn btn-primary btn-large">
                 <i class="fas fa-rocket"></i>
                 Get Started
@@ -35,7 +35,7 @@
             <div class="auth-header">
                 <div class="auth-logo">
                     <span class="logo-icon">🤖</span>
-                    <h2>AI Study Buddy</h2>
+                    <h2>Don’t just study. Learn with a buddy</h2>
                 </div>
                 <p class="auth-subtitle">Join thousands of students learning smarter</p>
             </div>
@@ -144,6 +144,8 @@
                             </div>
                         </div>
                         <button id="sendOtpBtn" class="btn btn-primary btn-full">Send OTP</button>
+                        <!-- reCAPTCHA container -->
+                        <div id="recaptcha-container"></div>
                     </div>
                     <div class="phone-step" id="otpStep" style="display: none;">
                         <p>Enter the verification code sent to your phone</p>
@@ -160,8 +162,6 @@
                     </div>
                 </div>
             </div>
-
-            <div id="recaptcha-container"></div>
         </div>
     </div>
 
@@ -173,7 +173,7 @@
                 <div class="header-left">
                     <div class="logo">
                         <span class="logo-icon">🤖</span>
-                        <h1>AI Study Buddy</h1>
+                        <h1>Your Pocket-Sized Tutor: Introducing Study Buddy</h1>
                     </div>
                 </div>
                 <div class="header-right">
@@ -238,7 +238,7 @@
                             <button id="askButton" class="btn btn-primary">
                                 <span class="btn-text">
                                     <i class="fas fa-paper-plane"></i>
-                                    Ask AI Tutor
+                                    Ask Your Buddy
                                 </span>
                                 <span class="btn-loading">
                                     <i class="fas fa-spinner fa-spin"></i>
@@ -252,7 +252,7 @@
                 <!-- Response Section -->
                 <div class="card response-card" id="responseCard" style="display: none;">
                     <div class="card-header">
-                        <h3><i class="fas fa-lightbulb"></i> AI Tutor's Answer</h3>
+                        <h3><i class="fas fa-lightbulb"></i> Your Buddy's Answer</h3>
                         <button id="clearBtn" class="btn btn-secondary btn-small">
                             <i class="fas fa-times"></i>
                             Clear
@@ -290,7 +290,9 @@
                 <div class="card history-card" id="historyCard" style="display: none;">
                     <div class="card-header">
                         <h3><i class="fas fa-history"></i> Recent Questions</h3>
-                        <button id="clearHistoryBtn" class="btn btn-clear-all">Clear All</button>
+                        <button id="clearHistoryBtn" class="btn btn-text btn-small">
+                            Clear All
+                        </button>
                     </div>
                     <div class="history-list" id="historyList"></div>
                 </div>
@@ -301,7 +303,9 @@
     <!-- Notification Container -->
     <div id="notificationContainer" class="notification-container"></div>
 
-    <!-- Firebase Scripts - Modern SDK -->
+    <!-- Firebase Scripts - Using both modular and compat for reliability -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
 </body>
