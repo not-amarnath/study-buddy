@@ -16,14 +16,11 @@ class FirebaseAuth {
     this.app = null
     this.auth = null
     this.currentUser = null
-    this.isInitialized = false
-    this.initializationPromise = null
 
-    // Start initialization immediately
-    this.initializationPromise = this.initializeFirebase()
+    this.initializeFirebase()
   }
 
-  async initializeFirebase() {
+  initializeFirebase() {
     const firebaseConfig = {
       apiKey: "AIzaSyDzqoKK6ixo00Rrff937ODqbfiKvTYA1M0",
       authDomain: "studdy-buddy-cfe22.firebaseapp.com",
@@ -35,50 +32,22 @@ class FirebaseAuth {
     }
 
     try {
-      console.log("Starting Firebase initialization...")
-
       // Initialize Firebase
       this.app = initializeApp(firebaseConfig)
-      console.log("Firebase app initialized")
 
       // Initialize Firebase Authentication and get a reference to the service
       this.auth = getAuth(this.app)
-      console.log("Firebase auth initialized")
 
       // Setup auth state listener
       this.setupAuthStateListener()
 
       // Handle redirect results (for Google sign-in)
-      await this.handleRedirectResult()
+      this.handleRedirectResult()
 
-      this.isInitialized = true
       console.log("Firebase initialized successfully with modular SDK")
-
-      return true
     } catch (error) {
       console.error("Firebase initialization error:", error)
-      this.isInitialized = false
-      throw error
     }
-  }
-
-  // Add this new method to ensure Firebase is ready
-  async ensureInitialized() {
-    if (this.isInitialized) {
-      return true
-    }
-
-    if (this.initializationPromise) {
-      try {
-        await this.initializationPromise
-        return this.isInitialized
-      } catch (error) {
-        console.error("Firebase initialization failed:", error)
-        throw new Error("Firebase failed to initialize. Please refresh the page and try again.")
-      }
-    }
-
-    throw new Error("Firebase initialization was not started properly.")
   }
 
   setupAuthStateListener() {
@@ -138,8 +107,6 @@ class FirebaseAuth {
   // Email/Password Authentication
   async signUpWithEmail(email, password, name) {
     try {
-      await this.ensureInitialized()
-
       const userCredential = await createUserWithEmailAndPassword(this.auth, email, password)
       const user = userCredential.user
 
@@ -162,8 +129,6 @@ class FirebaseAuth {
 
   async signInWithEmail(email, password) {
     try {
-      await this.ensureInitialized()
-
       const userCredential = await signInWithEmailAndPassword(this.auth, email, password)
       return userCredential.user
     } catch (error) {
@@ -176,7 +141,6 @@ class FirebaseAuth {
   async signInWithGoogle() {
     try {
       console.log("Starting Google sign-in process...")
-      await this.ensureInitialized()
 
       const provider = new GoogleAuthProvider()
       provider.addScope("profile")
@@ -225,7 +189,7 @@ class FirebaseAuth {
   // Add this method after signInWithGoogle
   async signInWithGoogleRedirect() {
     try {
-      const { signInWithRedirect, getRedirectResult } = await import("firebase/auth")
+      const { signInWithRedirect } = await import("firebase/auth")
 
       const provider = new GoogleAuthProvider()
       provider.addScope("profile")
@@ -263,7 +227,6 @@ class FirebaseAuth {
   // Sign Out
   async signOut() {
     try {
-      await this.ensureInitialized()
       await signOut(this.auth)
 
       if (window.showNotification) {
@@ -306,25 +269,10 @@ class FirebaseAuth {
   }
 }
 
-// Initialize Firebase Auth when DOM is loaded
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    window.firebaseAuth = new FirebaseAuth()
-
-    // Wait for initialization to complete
-    await window.firebaseAuth.ensureInitialized()
-
-    console.log("Firebase Auth initialized and ready")
-
-    // Dispatch a custom event to notify that Firebase is ready
-    window.dispatchEvent(new CustomEvent("firebaseReady"))
-  } catch (error) {
-    console.error("Failed to initialize Firebase Auth:", error)
-
-    if (window.showNotification) {
-      window.showNotification("Failed to initialize authentication. Please refresh the page.", "error")
-    }
-  }
+// Initialize Firebase Auth when DOM is loaded - Simple approach
+document.addEventListener("DOMContentLoaded", () => {
+  window.firebaseAuth = new FirebaseAuth()
+  console.log("Firebase Auth initialized successfully with modular SDK")
 })
 
 // Export for use in other modules

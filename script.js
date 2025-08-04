@@ -161,7 +161,7 @@ class AIStudyBuddy {
     this.setButtonLoading("loginForm", true)
 
     try {
-      // Wait for Firebase to be ready
+      // Simple wait for Firebase to be ready
       await this.waitForFirebase()
       await window.firebaseAuth.signInWithEmail(email, password)
     } catch (error) {
@@ -195,7 +195,7 @@ class AIStudyBuddy {
     this.setButtonLoading("signupForm", true)
 
     try {
-      // Wait for Firebase to be ready
+      // Simple wait for Firebase to be ready
       await this.waitForFirebase()
       await window.firebaseAuth.signUpWithEmail(email, password, name)
     } catch (error) {
@@ -207,7 +207,7 @@ class AIStudyBuddy {
 
   async handleGoogleSignIn() {
     try {
-      // Wait for Firebase to be ready
+      // Simple wait for Firebase to be ready
       await this.waitForFirebase()
 
       // Try popup first
@@ -242,35 +242,19 @@ class AIStudyBuddy {
     }
   }
 
-  // Helper function to wait for Firebase to be ready
+  // Simplified helper function to wait for Firebase to be ready
   async waitForFirebase() {
-    // If Firebase is already available and initialized, return immediately
-    if (window.firebaseAuth && window.firebaseAuth.isInitialized) {
-      return
+    let attempts = 0
+    const maxAttempts = 30 // 3 seconds max wait
+
+    while (!window.firebaseAuth && attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      attempts++
     }
 
-    // Wait for the firebaseReady event or timeout
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error("Firebase authentication failed to initialize. Please refresh the page."))
-      }, 10000) // 10 second timeout
-
-      // Listen for the firebaseReady event
-      const handleFirebaseReady = () => {
-        clearTimeout(timeout)
-        window.removeEventListener("firebaseReady", handleFirebaseReady)
-        resolve()
-      }
-
-      // If Firebase is already ready, resolve immediately
-      if (window.firebaseAuth && window.firebaseAuth.isInitialized) {
-        clearTimeout(timeout)
-        resolve()
-        return
-      }
-
-      window.addEventListener("firebaseReady", handleFirebaseReady)
-    })
+    if (!window.firebaseAuth) {
+      throw new Error("Firebase authentication is not ready. Please refresh the page.")
+    }
   }
 
   // UI Helpers
