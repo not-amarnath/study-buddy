@@ -1,22 +1,29 @@
-// Hybrid Firebase setup - using both compat and modular SDK for better reliability
-import firebase from "firebase/compat/app"
-import "firebase/compat/auth"
-import "firebase/compat/firestore"
+// Modern Firebase v9+ modular SDK
+import { initializeApp } from "firebase/app"
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from "firebase/auth"
 
 class FirebaseAuth {
   constructor() {
     this.app = null
     this.auth = null
     this.currentUser = null
-    this.recaptchaVerifier = null
-    this.confirmationResult = null
-    this.recaptchaWidgetId = null
+    this.isInitialized = false
+    this.initializationPromise = null
 
-    this.initializeFirebase()
+    // Start initialization immediately
+    this.initializationPromise = this.initializeFirebase()
   }
 
-  initializeFirebase() {
-    // Your original Firebase config
+  async initializeFirebase() {
     const firebaseConfig = {
       apiKey: "AIzaSyDzqoKK6ixo00Rrff937ODqbfiKvTYA1M0",
       authDomain: "studdy-buddy-cfe22.firebaseapp.com",
@@ -28,29 +35,57 @@ class FirebaseAuth {
     }
 
     try {
-      // Check if Firebase is already initialized
-      if (!firebase.apps.length) {
-        // Initialize Firebase using compat SDK
-        firebase.initializeApp(firebaseConfig)
-      }
+      console.log("Starting Firebase initialization...")
 
-      this.auth = firebase.auth()
-      this.auth.languageCode = "en"
+      // Initialize Firebase
+      this.app = initializeApp(firebaseConfig)
+      console.log("Firebase app initialized")
+
+      // Initialize Firebase Authentication and get a reference to the service
+      this.auth = getAuth(this.app)
+      console.log("Firebase auth initialized")
 
       // Setup auth state listener
       this.setupAuthStateListener()
 
-      console.log("Firebase initialized successfully with compat SDK")
+      // Handle redirect results (for Google sign-in)
+      await this.handleRedirectResult()
+
+      this.isInitialized = true
+      console.log("Firebase initialized successfully with modular SDK")
+
+      return true
     } catch (error) {
       console.error("Firebase initialization error:", error)
+      this.isInitialized = false
+      throw error
     }
   }
 
+  // Add this new method to ensure Firebase is ready
+  async ensureInitialized() {
+    if (this.isInitialized) {
+      return true
+    }
+
+    if (this.initializationPromise) {
+      try {
+        await this.initializationPromise
+        return this.isInitialized
+      } catch (error) {
+        console.error("Firebase initialization failed:", error)
+        throw new Error("Firebase failed to initialize. Please refresh the page and try again.")
+      }
+    }
+
+    throw new Error("Firebase initialization was not started properly.")
+  }
+
   setupAuthStateListener() {
-    this.auth.onAuthStateChanged((user) => {
+    onAuthStateChanged(this.auth, (user) => {
       this.currentUser = user
       if (user) {
-        console.log("User signed in:", user.email || user.phoneNumber)
+        console.log("User signed in:", user.email)
         this.onAuthSuccess(user)
       } else {
         console.log("User signed out")
@@ -61,8 +96,8 @@ class FirebaseAuth {
 
   onAuthSuccess(user) {
     // Update UI with user info
-    const userName = user.displayName || user.email || user.phoneNumber || "User"
-    const userEmail = user.email || user.phoneNumber || ""
+    const userName = user.displayName || user.email || "User"
+    const userEmail = user.email || ""
 
     const userNameEl = document.getElementById("userName")
     const userEmailEl = document.getElementById("userEmail")
@@ -103,11 +138,14 @@ class FirebaseAuth {
   // Email/Password Authentication
   async signUpWithEmail(email, password, name) {
     try {
-      const userCredential = await this.auth.createUserWithEmailAndPassword(email, password)
+      await this.ensureInitialized()
+
+      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password)
+      const user = userCredential.user
 
       // Update profile with name
-      if (name && userCredential.user) {
-        await userCredential.user.updateProfile({
+      if (name && user) {
+        await updateProfile(user, {
           displayName: name,
         })
       }
@@ -115,7 +153,7 @@ class FirebaseAuth {
       if (window.showNotification) {
         window.showNotification("Account created successfully! 🎉", "success")
       }
-      return userCredential.user
+      return user
     } catch (error) {
       console.error("Sign up error:", error)
       throw this.handleAuthError(error)
@@ -124,7 +162,9 @@ class FirebaseAuth {
 
   async signInWithEmail(email, password) {
     try {
-      const userCredential = await this.auth.signInWithEmailAndPassword(email, password)
+      await this.ensureInitialized()
+
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, password)
       return userCredential.user
     } catch (error) {
       console.error("Sign in error:", error)
@@ -132,242 +172,99 @@ class FirebaseAuth {
     }
   }
 
-  // Google Authentication
+  // Google Authentication with enhanced debugging
   async signInWithGoogle() {
     try {
-      const provider = new firebase.auth.GoogleAuthProvider()
+      console.log("Starting Google sign-in process...")
+      await this.ensureInitialized()
+
+      const provider = new GoogleAuthProvider()
       provider.addScope("profile")
       provider.addScope("email")
 
-      const result = await this.auth.signInWithPopup(provider)
+      // Add custom parameters for better UX
+      provider.setCustomParameters({
+        prompt: "select_account",
+      })
+
+      console.log("Provider configured, attempting popup...")
+      const result = await signInWithPopup(this.auth, provider)
       const user = result.user
 
-      console.log("Google sign-in successful:", user)
+      console.log("Google sign-in successful:", user.email)
+
+      if (window.showNotification) {
+        window.showNotification(`Welcome ${user.displayName || user.email}! 🎉`, "success")
+      }
+
       return user
     } catch (error) {
-      console.error("Google sign in error:", error)
+      console.error("Google sign in error details:", {
+        code: error.code,
+        message: error.message,
+        customData: error.customData,
+      })
 
+      // Handle specific Google auth errors
       if (error.code === "auth/popup-closed-by-user") {
         throw new Error("Sign-in popup was closed. Please try again.")
       } else if (error.code === "auth/cancelled-popup-request") {
         throw new Error("Sign-in was cancelled. Please try again.")
+      } else if (error.code === "auth/popup-blocked") {
+        throw new Error("Popup was blocked by browser. Please allow popups and try again.")
+      } else if (error.code === "auth/unauthorized-domain") {
+        throw new Error("This domain is not authorized for Google sign-in. Please contact support.")
+      } else if (error.code === "auth/operation-not-allowed") {
+        throw new Error("Google sign-in is not enabled. Please contact support.")
       }
 
       throw this.handleAuthError(error)
     }
   }
 
-  // Phone Authentication - Setup reCAPTCHA (based on your working code)
-  setupRecaptcha() {
+  // Add this method after signInWithGoogle
+  async signInWithGoogleRedirect() {
     try {
-      // Clear existing verifier
-      if (this.recaptchaVerifier) {
-        this.recaptchaVerifier.clear()
-        this.recaptchaVerifier = null
-      }
+      const { signInWithRedirect, getRedirectResult } = await import("firebase/auth")
 
-      // Clear the container
-      const container = document.getElementById("recaptcha-container")
-      if (container) {
-        container.innerHTML = ""
-      }
+      const provider = new GoogleAuthProvider()
+      provider.addScope("profile")
+      provider.addScope("email")
 
-      console.log("Setting up reCAPTCHA...")
-
-      // Create new RecaptchaVerifier using compat SDK
-      this.recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", {
-        size: "invisible",
-        callback: (response) => {
-          console.log("reCAPTCHA solved successfully")
-        },
-        "expired-callback": () => {
-          console.log("reCAPTCHA expired")
-          if (window.showNotification) {
-            window.showNotification("reCAPTCHA expired. Please try again.", "warning")
-          }
-        },
-        "error-callback": (error) => {
-          console.error("reCAPTCHA error:", error)
-          if (window.showNotification) {
-            window.showNotification("reCAPTCHA error. Please try again.", "error")
-          }
-        },
-      })
-
-      // Render the reCAPTCHA
-      return this.recaptchaVerifier.render().then((widgetId) => {
-        this.recaptchaWidgetId = widgetId
-        console.log("reCAPTCHA rendered successfully with widget ID:", widgetId)
-        return this.recaptchaVerifier
-      })
+      await signInWithRedirect(this.auth, provider)
     } catch (error) {
-      console.error("reCAPTCHA setup error:", error)
-      throw new Error("Failed to setup reCAPTCHA. Please refresh and try again.")
+      console.error("Google redirect sign in error:", error)
+      throw this.handleAuthError(error)
     }
   }
 
-  // Format phone number
-  formatPhoneNumber(phoneNumber) {
-    // Remove all non-digit characters except +
-    let cleaned = phoneNumber.replace(/[^\d+]/g, "")
-
-    // If it doesn't start with +, add country code
-    if (!cleaned.startsWith("+")) {
-      // Default to US country code if no + is provided
-      if (cleaned.length === 10) {
-        cleaned = "+1" + cleaned
-      } else {
-        cleaned = "+" + cleaned
-      }
-    }
-
-    console.log("Formatted phone number:", cleaned)
-    return cleaned
-  }
-
-  // Send Phone OTP (based on your working phoneAuth function)
-  async sendPhoneOTP(phoneNumber) {
+  // Add this method to handle redirect results
+  async handleRedirectResult() {
     try {
-      console.log("Starting phone OTP process...")
+      const { getRedirectResult } = await import("firebase/auth")
+      const result = await getRedirectResult(this.auth)
 
-      // Format phone number
-      const formattedPhone = this.formatPhoneNumber(phoneNumber)
+      if (result) {
+        const user = result.user
+        console.log("Google redirect sign-in successful:", user.email)
 
-      if (formattedPhone.length < 10) {
-        throw new Error("Please enter a valid phone number")
-      }
-
-      console.log("Sending OTP to:", formattedPhone)
-
-      // Setup reCAPTCHA
-      await this.setupRecaptcha()
-
-      if (!this.recaptchaVerifier) {
-        throw new Error("reCAPTCHA setup failed")
-      }
-
-      console.log("reCAPTCHA setup successful, sending SMS...")
-
-      // Send SMS using compat SDK (similar to your working code)
-      this.confirmationResult = await this.auth.signInWithPhoneNumber(formattedPhone, this.recaptchaVerifier)
-
-      console.log("OTP Sent successfully")
-
-      if (window.showNotification) {
-        window.showNotification("OTP sent successfully! 📱", "success")
-      }
-
-      return true
-    } catch (error) {
-      console.error("Send OTP error:", error)
-
-      // Clear reCAPTCHA on error
-      if (this.recaptchaVerifier) {
-        try {
-          this.recaptchaVerifier.clear()
-        } catch (e) {
-          console.log("Error clearing reCAPTCHA:", e)
+        if (window.showNotification) {
+          window.showNotification(`Welcome ${user.displayName || user.email}! 🎉`, "success")
         }
-        this.recaptchaVerifier = null
       }
-
-      // Handle specific errors
-      if (error.code === "auth/invalid-phone-number") {
-        throw new Error("Invalid phone number format. Please include country code (e.g., +1234567890)")
-      } else if (error.code === "auth/too-many-requests") {
-        throw new Error("Too many requests. Please try again later.")
-      }
-
-      throw this.handleAuthError(error)
-    }
-  }
-
-  // Verify Phone OTP (based on your working codeverify function)
-  async verifyPhoneOTP(code) {
-    try {
-      if (!this.confirmationResult) {
-        throw new Error("No OTP request found. Please request OTP first.")
-      }
-
-      if (!code || code.length !== 6) {
-        throw new Error("Please enter a valid 6-digit verification code.")
-      }
-
-      console.log("Verifying OTP code...")
-
-      // Confirm the SMS code (similar to your working code)
-      const result = await this.confirmationResult.confirm(code)
-
-      console.log("OTP Verified successfully")
-
+    } catch (error) {
+      console.error("Redirect result error:", error)
       if (window.showNotification) {
-        window.showNotification("Phone verified successfully! ✅", "success")
+        window.showNotification("Google sign-in failed. Please try again.", "error")
       }
-
-      // Clear confirmation result
-      this.confirmationResult = null
-
-      return result.user
-    } catch (error) {
-      console.error("Verify OTP error:", error)
-
-      if (error.code === "auth/invalid-verification-code") {
-        console.log("OTP Not correct")
-        throw new Error("Invalid verification code. Please check and try again.")
-      } else if (error.code === "auth/code-expired") {
-        throw new Error("Verification code has expired. Please request a new one.")
-      }
-
-      throw this.handleAuthError(error)
-    }
-  }
-
-  // Resend OTP
-  async resendPhoneOTP(phoneNumber) {
-    try {
-      console.log("Resending OTP...")
-
-      // Clear previous confirmation result
-      this.confirmationResult = null
-
-      // Clear reCAPTCHA
-      if (this.recaptchaVerifier) {
-        try {
-          this.recaptchaVerifier.clear()
-        } catch (e) {
-          console.log("Error clearing reCAPTCHA:", e)
-        }
-        this.recaptchaVerifier = null
-      }
-
-      // Wait a moment before resending
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // Send new OTP
-      return await this.sendPhoneOTP(phoneNumber)
-    } catch (error) {
-      console.error("Resend OTP error:", error)
-      throw this.handleAuthError(error)
     }
   }
 
   // Sign Out
   async signOut() {
     try {
-      // Clear reCAPTCHA verifier
-      if (this.recaptchaVerifier) {
-        try {
-          this.recaptchaVerifier.clear()
-        } catch (e) {
-          console.log("Error clearing reCAPTCHA:", e)
-        }
-        this.recaptchaVerifier = null
-      }
-
-      // Clear confirmation result
-      this.confirmationResult = null
-
-      await this.auth.signOut()
+      await this.ensureInitialized()
+      await signOut(this.auth)
 
       if (window.showNotification) {
         window.showNotification("Signed out successfully! 👋", "info")
@@ -390,12 +287,8 @@ class FirebaseAuth {
       "auth/network-request-failed": "Network error. Please check your connection.",
       "auth/popup-closed-by-user": "Sign-in popup was closed.",
       "auth/cancelled-popup-request": "Sign-in was cancelled.",
-      "auth/invalid-phone-number": "Please enter a valid phone number with country code (e.g., +1234567890).",
-      "auth/invalid-verification-code": "Invalid verification code. Please check and try again.",
-      "auth/code-expired": "Verification code has expired. Please request a new one.",
-      "auth/quota-exceeded": "SMS quota exceeded. Please try again later.",
-      "auth/captcha-check-failed": "reCAPTCHA verification failed. Please try again.",
       "auth/unauthorized-domain": "This domain is not authorized. Please add it to Firebase Console.",
+      "auth/invalid-credential": "Invalid credentials. Please check your email and password.",
     }
 
     const message = errorMessages[error.code] || error.message || "An error occurred during authentication."
@@ -414,13 +307,23 @@ class FirebaseAuth {
 }
 
 // Initialize Firebase Auth when DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
-  // Wait for Firebase compat SDK to load
-  if (typeof firebase !== "undefined") {
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
     window.firebaseAuth = new FirebaseAuth()
-    console.log("Firebase Auth initialized successfully with compat SDK")
-  } else {
-    console.error("Firebase compat SDK not loaded")
+
+    // Wait for initialization to complete
+    await window.firebaseAuth.ensureInitialized()
+
+    console.log("Firebase Auth initialized and ready")
+
+    // Dispatch a custom event to notify that Firebase is ready
+    window.dispatchEvent(new CustomEvent("firebaseReady"))
+  } catch (error) {
+    console.error("Failed to initialize Firebase Auth:", error)
+
+    if (window.showNotification) {
+      window.showNotification("Failed to initialize authentication. Please refresh the page.", "error")
+    }
   }
 })
 

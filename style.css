@@ -355,21 +355,48 @@ body {
 }
 
 .btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   background: #4285f4;
-  color: white;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.05rem;
+  border: none;
+  border-radius: 1rem;
+  padding: 0.75rem 2rem;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.08);
+  width: 100%;
+  max-width: 320px;
+  margin: 1.5rem auto;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
-.btn-google:hover {
-  background: #3367d6;
+.btn-google:hover,
+.btn-google:focus {
+  background: #357ae8;
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.16);
+  outline: none;
 }
 
-.btn-phone {
-  background: var(--success-color);
-  color: white;
+.btn-google i {
+  font-size: 1.3em;
+  background: #fff;
+  color: #4285f4;
+  border-radius: 50%;
+  padding: 2px 6px;
+  margin-right: 4px;
+  min-width: 28px;
+  text-align: center;
 }
 
-.btn-phone:hover {
-  background: #059669;
+/* Center the social-auth container */
+.social-auth {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 /* Phone Modal */

@@ -1,6 +1,3 @@
-// Import Firebase auth for type checking (optional)
-// import FirebaseAuth from './firebase.js'
-
 class AIStudyBuddy {
   constructor() {
     this.geminiApiKey = "AIzaSyB-X2xaSqorpLpJpTcXSRbH05JiSvDfpFs"
@@ -14,7 +11,6 @@ class AIStudyBuddy {
     this.setupTheme()
     this.bindEvents()
     this.setupPasswordToggles()
-    this.setupOTPInputs()
     this.loadHistory()
 
     // Show intro screen initially
@@ -45,37 +41,23 @@ class AIStudyBuddy {
       this.handleLogin()
     })
 
-    document.getElementById('signupForm').addEventListener('submit', function(e) {
-        const btn = this.querySelector('button[type="submit"]');
-        btn.classList.add('loading');
-        // Optionally, remove loading after async signup completes:
-        // setTimeout(() => btn.classList.remove('loading'), 2000);
-    });
+    document.getElementById("signupForm").addEventListener("submit", (e) => {
+      e.preventDefault()
+      this.handleSignup()
+    })
 
-    // Social auth
+    // Google auth
     document.getElementById("googleSignInBtn").addEventListener("click", () => {
       this.handleGoogleSignIn()
     })
 
-    document.getElementById("phoneAuthBtn").addEventListener("click", () => {
-      this.showPhoneModal()
-    })
-
-    // Phone auth modal
-    document.getElementById("closePhoneModal").addEventListener("click", () => {
-      this.hidePhoneModal()
-    })
-
-    document.getElementById("sendOtpBtn").addEventListener("click", () => {
-      this.handleSendOTP()
-    })
-
-    document.getElementById("verifyOtpBtn").addEventListener("click", () => {
-      this.handleVerifyOTP()
-    })
-
-    document.getElementById("resendOtpBtn").addEventListener("click", () => {
-      this.handleResendOTP()
+    // Test Google auth (temporary for debugging)
+    document.getElementById("testGoogleBtn").addEventListener("click", async () => {
+      const isWorking = await this.testGoogleAuth()
+      showNotification(
+        isWorking ? "Google Auth setup is working!" : "Google Auth setup has issues",
+        isWorking ? "success" : "error",
+      )
     })
 
     // Main app
@@ -127,13 +109,6 @@ class AIStudyBuddy {
         document.getElementById("userDropdown").classList.remove("active")
       }
     })
-
-    // Close phone modal when clicking outside
-    document.getElementById("phoneModal").addEventListener("click", (e) => {
-      if (e.target === e.currentTarget) {
-        this.hidePhoneModal()
-      }
-    })
   }
 
   showScreen(screenId) {
@@ -169,43 +144,6 @@ class AIStudyBuddy {
           input.type = "password"
           icon.classList.replace("fa-eye-slash", "fa-eye")
         }
-      })
-    })
-  }
-
-  // OTP Inputs
-  setupOTPInputs() {
-    const otpInputs = document.querySelectorAll(".otp-input")
-    otpInputs.forEach((input, index) => {
-      input.addEventListener("input", (e) => {
-        // Only allow numbers
-        e.target.value = e.target.value.replace(/[^0-9]/g, "")
-
-        if (e.target.value.length === 1 && index < otpInputs.length - 1) {
-          otpInputs[index + 1].focus()
-        }
-      })
-
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Backspace" && e.target.value === "" && index > 0) {
-          otpInputs[index - 1].focus()
-        }
-      })
-
-      input.addEventListener("paste", (e) => {
-        e.preventDefault()
-        const paste = (e.clipboardData || window.clipboardData).getData("text")
-        const digits = paste.replace(/[^0-9]/g, "").slice(0, 6)
-
-        digits.split("").forEach((digit, i) => {
-          if (otpInputs[i]) {
-            otpInputs[i].value = digit
-          }
-        })
-
-        // Focus on the next empty input or the last one
-        const nextIndex = Math.min(digits.length, otpInputs.length - 1)
-        otpInputs[nextIndex].focus()
       })
     })
   }
@@ -271,125 +209,27 @@ class AIStudyBuddy {
     try {
       // Wait for Firebase to be ready
       await this.waitForFirebase()
+
+      // Try popup first
       await window.firebaseAuth.signInWithGoogle()
     } catch (error) {
-      showNotification(error.message, "error")
-    }
-  }
+      console.error("Google popup sign-in failed:", error)
 
-  showPhoneModal() {
-    document.getElementById("phoneModal").classList.add("active")
-    document.getElementById("phoneStep").style.display = "block"
-    document.getElementById("otpStep").style.display = "none"
+      // If popup fails, try redirect as fallback
+      if (error.message.includes("popup") || error.message.includes("blocked")) {
+        if (window.showNotification) {
+          window.showNotification("Popup blocked. Redirecting to Google...", "info")
+        }
 
-    // Clear previous inputs
-    document.getElementById("phoneNumber").value = ""
-    document.querySelectorAll(".otp-input").forEach((input) => (input.value = ""))
-  }
-
-  hidePhoneModal() {
-    document.getElementById("phoneModal").classList.remove("active")
-  }
-
-  async handleSendOTP() {
-    const phoneNumber = document.getElementById("phoneNumber").value.trim()
-
-    if (!phoneNumber) {
-      showNotification("Please enter a phone number", "error")
-      return
-    }
-
-    // Validate phone number format
-    if (!phoneNumber.startsWith("+")) {
-      showNotification("Please include country code (e.g., +1234567890)", "error")
-      return
-    }
-
-    const sendBtn = document.getElementById("sendOtpBtn")
-    const originalText = sendBtn.textContent
-    sendBtn.textContent = "Sending..."
-    sendBtn.disabled = true
-
-    try {
-      // Wait for Firebase to be ready
-      await this.waitForFirebase()
-      await window.firebaseAuth.sendPhoneOTP(phoneNumber)
-
-      // Switch to OTP step
-      document.getElementById("phoneStep").style.display = "none"
-      document.getElementById("otpStep").style.display = "block"
-
-      // Focus on first OTP input
-      document.querySelector(".otp-input").focus()
-    } catch (error) {
-      showNotification(error.message, "error")
-    } finally {
-      sendBtn.textContent = originalText
-      sendBtn.disabled = false
-    }
-  }
-
-  async handleVerifyOTP() {
-    const otpInputs = document.querySelectorAll(".otp-input")
-    const otp = Array.from(otpInputs)
-      .map((input) => input.value)
-      .join("")
-
-    if (otp.length !== 6) {
-      showNotification("Please enter the complete 6-digit verification code", "error")
-      return
-    }
-
-    const verifyBtn = document.getElementById("verifyOtpBtn")
-    const originalText = verifyBtn.textContent
-    verifyBtn.textContent = "Verifying..."
-    verifyBtn.disabled = true
-
-    try {
-      // Wait for Firebase to be ready
-      await this.waitForFirebase()
-      await window.firebaseAuth.verifyPhoneOTP(otp)
-      this.hidePhoneModal()
-    } catch (error) {
-      showNotification(error.message, "error")
-      // Clear OTP inputs on error
-      otpInputs.forEach((input) => (input.value = ""))
-      otpInputs[0].focus()
-    } finally {
-      verifyBtn.textContent = originalText
-      verifyBtn.disabled = false
-    }
-  }
-
-  async handleResendOTP() {
-    const phoneNumber = document.getElementById("phoneNumber").value.trim()
-
-    if (!phoneNumber) {
-      showNotification("Phone number not found. Please start over.", "error")
-      return
-    }
-
-    const resendBtn = document.getElementById("resendOtpBtn")
-    const originalText = resendBtn.textContent
-    resendBtn.textContent = "Resending..."
-    resendBtn.disabled = true
-
-    try {
-      // Wait for Firebase to be ready
-      await this.waitForFirebase()
-      await window.firebaseAuth.resendPhoneOTP(phoneNumber)
-
-      // Clear OTP inputs
-      document.querySelectorAll(".otp-input").forEach((input) => (input.value = ""))
-      document.querySelector(".otp-input").focus()
-    } catch (error) {
-      showNotification(error.message, "error")
-    } finally {
-      // Re-enable button after 30 seconds
-      setTimeout(() => {
-        resendBtn.textContent = originalText
-        resendBtn.disabled = false
-      }, 30000)
+        try {
+          await window.firebaseAuth.signInWithGoogleRedirect()
+        } catch (redirectError) {
+          console.error("Google redirect sign-in also failed:", redirectError)
+          showNotification("Google sign-in failed. Please try again or use email/password.", "error")
+        }
+      } else {
+        showNotification(error.message, "error")
+      }
     }
   }
 
@@ -404,17 +244,33 @@ class AIStudyBuddy {
 
   // Helper function to wait for Firebase to be ready
   async waitForFirebase() {
-    let attempts = 0
-    const maxAttempts = 50 // 5 seconds max wait
-
-    while (!window.firebaseAuth && attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      attempts++
+    // If Firebase is already available and initialized, return immediately
+    if (window.firebaseAuth && window.firebaseAuth.isInitialized) {
+      return
     }
 
-    if (!window.firebaseAuth) {
-      throw new Error("Firebase authentication is not ready. Please refresh the page.")
-    }
+    // Wait for the firebaseReady event or timeout
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Firebase authentication failed to initialize. Please refresh the page."))
+      }, 10000) // 10 second timeout
+
+      // Listen for the firebaseReady event
+      const handleFirebaseReady = () => {
+        clearTimeout(timeout)
+        window.removeEventListener("firebaseReady", handleFirebaseReady)
+        resolve()
+      }
+
+      // If Firebase is already ready, resolve immediately
+      if (window.firebaseAuth && window.firebaseAuth.isInitialized) {
+        clearTimeout(timeout)
+        resolve()
+        return
+      }
+
+      window.addEventListener("firebaseReady", handleFirebaseReady)
+    })
   }
 
   // UI Helpers
@@ -503,7 +359,6 @@ class AIStudyBuddy {
     const systemPrompt = subjectPrompts[subject] || subjectPrompts.general
     const fullPrompt = `${systemPrompt}\n\nStudent's Question: ${question}\n\nPlease provide a clear, educational answer that:\n1. Explains the concept in simple, easy-to-understand terms\n2. Uses examples or analogies when helpful\n3. Breaks down complex ideas into smaller, manageable parts\n4. Encourages further learning and curiosity\n\nAnswer:`
 
-    // Updated API endpoint and model name
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`,
       {
@@ -670,6 +525,25 @@ class AIStudyBuddy {
     if (diffDays < 7) return `${diffDays}d ago`
     return date.toLocaleDateString()
   }
+
+  // Add this method to test Google auth setup
+  async testGoogleAuth() {
+    try {
+      console.log("Testing Google Auth configuration...")
+      console.log("Auth domain:", window.firebaseAuth.auth.config.authDomain)
+      console.log("Current domain:", window.location.hostname)
+
+      // Test if Google provider is available
+      const { GoogleAuthProvider } = await import("firebase/auth")
+      const provider = new GoogleAuthProvider()
+      console.log("Google provider created successfully:", provider)
+
+      return true
+    } catch (error) {
+      console.error("Google Auth test failed:", error)
+      return false
+    }
+  }
 }
 
 // Notification System
@@ -709,17 +583,6 @@ function showNotification(message, type = "info") {
 
 // Make showNotification globally available
 window.showNotification = showNotification
-
-function fadeInOutH1() {
-    const h1 = document.querySelector('h1');
-    h1.classList.remove('fade-out');
-    h1.classList.add('fade-in');
-    setTimeout(() => {
-        h1.classList.remove('fade-in');
-        h1.classList.add('fade-out');
-    }, 2000); // fades out after 2 seconds
-}
-// Call fadeInOutH1() when you want the effect
 
 // Initialize the app
 document.addEventListener("DOMContentLoaded", () => {

@@ -20,7 +20,7 @@
                     <span class="float-element">🎓</span>
                 </div>
             </div>
-            <h1> Study Buddy: Learn Smarter, Not Harder </h1>
+            <h1>Study Buddy: Learn Smarter, Not Harder</h1>
             <p>More than a study tool — it's your personal mentor for mastering any subject, anytime.</p>
             <button id="getStartedBtn" class="btn btn-primary btn-large">
                 <i class="fas fa-rocket"></i>
@@ -35,7 +35,7 @@
             <div class="auth-header">
                 <div class="auth-logo">
                     <span class="logo-icon">🤖</span>
-                    <h2>Don’t just study. Learn with a buddy</h2>
+                    <h2>Don't just study. Learn with a buddy</h2>
                 </div>
                 <p class="auth-subtitle">Join thousands of students learning smarter</p>
             </div>
@@ -117,51 +117,17 @@
             </div>
 
             <div class="social-auth">
-                <button id="googleSignInBtn" class="btn btn-google">
+                <button id="googleSignInBtn" class="btn btn-google btn-full" onclick="console.log('Google button clicked')">
                     <i class="fab fa-google"></i>
-                    Google
-                </button>
-                <button id="phoneAuthBtn" class="btn btn-phone">
-                    <i class="fas fa-phone"></i>
-                    Phone
+                    Continue with Google
                 </button>
             </div>
 
-            <!-- Phone Auth Modal -->
-            <div class="phone-modal" id="phoneModal">
-                <div class="phone-modal-content">
-                    <div class="phone-modal-header">
-                        <h3>Phone Authentication</h3>
-                        <button class="close-modal" id="closePhoneModal">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="phone-step" id="phoneStep">
-                        <div class="input-group">
-                            <div class="input-wrapper">
-                                <i class="fas fa-phone input-icon"></i>
-                                <input type="tel" id="phoneNumber" placeholder="+1 (555) 123-4567" required>
-                            </div>
-                        </div>
-                        <button id="sendOtpBtn" class="btn btn-primary btn-full">Send OTP</button>
-                        <!-- reCAPTCHA container -->
-                        <div id="recaptcha-container"></div>
-                    </div>
-                    <div class="phone-step" id="otpStep" style="display: none;">
-                        <p>Enter the verification code sent to your phone</p>
-                        <div class="otp-inputs">
-                            <input type="text" class="otp-input" maxlength="1">
-                            <input type="text" class="otp-input" maxlength="1">
-                            <input type="text" class="otp-input" maxlength="1">
-                            <input type="text" class="otp-input" maxlength="1">
-                            <input type="text" class="otp-input" maxlength="1">
-                            <input type="text" class="otp-input" maxlength="1">
-                        </div>
-                        <button id="verifyOtpBtn" class="btn btn-primary btn-full">Verify Code</button>
-                        <button id="resendOtpBtn" class="btn btn-text">Resend Code</button>
-                    </div>
-                </div>
-            </div>
+            <!-- Add this after the Google button for testing -->
+            <button id="testGoogleBtn" class="btn btn-secondary btn-full" style="margin-top: 10px;">
+                <i class="fas fa-bug"></i>
+                Test Google Auth Setup
+            </button>
         </div>
     </div>
 
@@ -303,9 +269,7 @@
     <!-- Notification Container -->
     <div id="notificationContainer" class="notification-container"></div>
 
-    <!-- Firebase Scripts - Using both modular and compat for reliability -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <!-- Firebase Scripts - Modern modular SDK -->
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
 </body>
